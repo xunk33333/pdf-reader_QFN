@@ -170,20 +170,20 @@ def detect_qfn():
     opt = parser.parse_args()
 
     detect(opt=opt)
-    img_path = r"./tmp_pic/tmp.png"
-    img = cv2.imread(img_path)
-    with open("tmp_txt/exp/labels/tmp.txt", 'r', encoding='utf-8') as f:
-        for ann in f.readlines():
-            ann = ann.strip('\n').split(' ')      #去除文本中的换行符                      
-            ann = [int(x) for x in ann]
-            l,t,r,b = scale_rec(ann[1], ann[2], ann[3], ann[4]) 
-            cv2.rectangle(img, (l,t), (r,b), (255,0,0), 2)
-    f.close()
-    cv2.imshow('src',img)
-    cv2.waitKey()
+    # img_path = r"./tmp_pic/tmp.png"
+    # img = cv2.imread(img_path)
+    # with open("tmp_txt/exp/labels/tmp.txt", 'r', encoding='utf-8') as f:
+    #     for ann in f.readlines():
+    #         ann = ann.strip('\n').split(' ')      #去除文本中的换行符                      
+    #         ann = [int(x) for x in ann]
+    #         l,t,r,b = scale_rec(ann[1], ann[2], ann[3], ann[4]) 
+    #         cv2.rectangle(img, (l,t), (r,b), (255,0,0), 2)
+    # f.close()
+    # cv2.imshow('src',img)
+    # cv2.waitKey()
 def scale_rec(x1, y1,  # upper-left corner
     x2, y2 ,# lower-right corner
-    scaling_factor=1.2
+    scaling_factor=1.1
     ):
 
     # scaling factor and center point

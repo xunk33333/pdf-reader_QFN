@@ -1,9 +1,9 @@
-# from paddleocr import PaddleOCR, draw_ocr
+from paddleocr import PaddleOCR, draw_ocr
 
 
 import traceback
 import fitz
-from paddleocr import PaddleOCR
+
 
 # import tr
 import cv2, time, os
@@ -11,8 +11,8 @@ from PIL import Image, ImageDraw
 import numpy as np
 
 
-from match.pdf_text_extract_process import match_text_num, del_dir, get_original_data
-from match.yolov5.detect import detect_qfn
+from match.pdf_text_extract_process import match_text_num, del_dir, get_original_data_dict
+from match.yolov5.detect import detect_qfn, scale_rec
 
 
 def extractPackage(pdfPath, pageNumber, selectRec, outputPath):
@@ -46,7 +46,7 @@ def extractPackage(pdfPath, pageNumber, selectRec, outputPath):
     #主流程
     clip = fitz.Rect(selectRec)  # 想要截取的区域
     try:
-        num_data,text_data = get_original_data(page, clip)  # x坐标  y坐标  文本
+        num_data,text_data = get_original_data_dict(page, clip)  # x坐标  y坐标  文本
         result = match_text_num(num_data,text_data)
         result = sorted(result, key=lambda x: x[0])
         if result.__len__() == 0:
@@ -98,7 +98,16 @@ def crop_fig_to_paddle(img_path, num):
         img.rotate(270, expand=1).save(save_path)
 
     return save_path
-
+def crop_fig_to_paddle_ByYOLO(img_path, num, boxs):
+    img = Image.open(img_path)
+    save_path = img_path[:-4] + "_" + str(num) + ".jpg"
+    img = img.crop(boxs[num])
+    l,t,r,b = boxs[num]
+    if r-l<b-t:
+        img.save(save_path)
+    else:
+        img.rotate(270, expand=1).save(save_path)
+    return save_path
 
 def tr_filter_noise(rec) -> bool:
     var = rec[2] > 0.7 and (
@@ -235,8 +244,19 @@ def extract_with_paddle(img_path):
                     cls_model_dir= 'match/ppocr_model/cls/ch_ppocr_mobile_v2.0_cls_infer'
                     )  # need to run only once to download and load model into memory
     alldata = list()
-    for num in range(4):
-        croped_img_path = crop_fig_to_paddle(img_path, num)
+    boxs = []
+    
+    #读取文件获得boundingbox信息
+    with open("tmp_txt/exp/labels/tmp.txt", 'r', encoding='utf-8') as f:
+        for ann in f.readlines():
+            ann = ann.strip('\n').split(' ')      #去除文本中的换行符                      
+            ann = [int(x) for x in ann]
+            l,t,r,b = scale_rec(ann[1], ann[2], ann[3], ann[4]) 
+            boxs.append((l,t,r,b))
+    f.close()
+
+    for num in range(boxs.__len__()):
+        croped_img_path = crop_fig_to_paddle_ByYOLO(img_path, num, boxs)
         result = ocr.ocr(croped_img_path, cls=True)
         # for idx in range(len(result)):
         #     res = result[idx]
@@ -248,9 +268,9 @@ def extract_with_paddle(img_path):
         boxes = [line[0] for line in result]
         txts = [line[1][0] for line in result]
         scores = [line[1][1] for line in result]
-        # im_show = draw_ocr(image, boxes, txts, scores)
-        # im_show = Image.fromarray(im_show)
-        # im_show.save('result' + str(num) + '.jpg')
+        im_show = draw_ocr(image, boxes, txts, scores)
+        im_show = Image.fromarray(im_show)
+        im_show.save('tmp_pic/'+'result' + str(num) + '.jpg')
 
         alldata.append([((x[0][0] + x[1][0]) * 0.5, (x[0][1] + x[2][1]) * 0.5, y) for x, y in zip(boxes, txts) if
                         paddle_filter_noise(y)])

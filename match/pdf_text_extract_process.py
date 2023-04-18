@@ -151,7 +151,7 @@ def concat_subscript_text(lines, subline, threshold1=5, threshold2=50):
         pass
 
 
-def get_original_data(page, clip):
+def get_original_data_dict(page, clip):
     blocks = page.get_text("dict", clip=clip)['blocks']
     lines = []
     data = []
@@ -273,6 +273,21 @@ def get_original_data(page, clip):
 
     return num_data, text_data
 
+def get_original_data_words(page, clip):
+    num_data = []
+    text_data = []
+    data = [(x[2], x[3], x[4]) for x in page.get_text("words", clip=clip)]  # x坐标  y坐标  文本
+    for center_x, center_y, text in data:
+        if text.isdigit():
+            num_data.append((center_x, center_y, int(text)))
+        else:
+            text_data.append((center_x, center_y, text))
+
+    num_data = sorted(num_data, key=lambda x: int(x[2]))#排序
+    if num_data[-1][2] % 2 == 1:  # 删除奇数
+        num_data.pop(-1)
+        
+    return num_data, text_data
 
 def del_dir(path):
     filelist = []
