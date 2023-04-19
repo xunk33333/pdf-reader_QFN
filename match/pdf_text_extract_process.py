@@ -30,6 +30,7 @@ def text_filter(txt):
                or re.search("top", txt, re.IGNORECASE)
                or re.search("Thermal", txt, re.IGNORECASE)
                or re.search("pad", txt, re.IGNORECASE)
+               or re.search(",", txt, re.IGNORECASE)
                )
 
     return var
@@ -86,11 +87,10 @@ def split_span_text(lines):
                               })
 
 
-def concat_line_text(lines):
+def concat_line_text(lines,standard_font_size):
     # 拼接下标
     concated_lines = []
     # 1 比较字体大小，找到下标字体.
-    standard_font_size = lines[0]['spans'][0]['size']  
     for line in lines.copy():
         try:
             # 2 根据角度dir，区分拼接顺序与筛选条件：5与50
@@ -162,58 +162,33 @@ def get_original_data_dict(page, clip):
         except:
             continue  # 由于split span后新加入的line不规范，没有，key：spans所以跳过
 
-    # 连接line line的text
-    concat_line_text(lines)
+    
 
-    for line in lines:
-        if line.get('bbox') is not None:
-            data.append((line['bbox'][0] / 2 + line['bbox'][2] / 2,
+    #获得num_data
+    for line in lines.copy():
+        if line['text'].isdigit():
+            standard_font_size = line['spans'][0]['size']
+            num_data.append((line['bbox'][0] / 2 + line['bbox'][2] / 2,
                          line['bbox'][1] / 2 + line['bbox'][3] / 2,
                          line['text'])
                         )
-        else:
-            data.append((line['origin'][0],
-                        line['origin'][1],
-                        line['text'])
-                        )
-
-    for center_x, center_y, text in data:
-        if text.isdigit():
-            num_data.append((center_x, center_y, text))
-        elif successive_digit(text):
-            continue
-        else:
-            text_data.append((center_x, center_y, text))
-
+            lines.remove(line)
+            
     # 上面获取num——data有问题，所以用下面方法补充
     words = page.get_text("words", clip=clip)
     for _, _, right, bottom, txt, block_no, line_no, word_no in words:
         if txt.isdigit() and txt not in [x[2] for x in num_data]:
             num_data.append((right-2, bottom-2, txt))
-
-    # 数字 字符在一个span中的特殊情况处理
-    def synthetic_num_txt(text):
-        words = [x for x in text.split(' ') if not x == '']
-        if words.__len__() == 2:
-            if words[0].isdigit() and not words[1].isdigit():
-                return words[1]
-            elif words[1].isdigit() and not words[0].isdigit():
-                return words[0]
-            else:
-                return text
-        else:
-            return text
-    text_data = [(center_x, center_y, synthetic_num_txt(text))
-                 for center_x, center_y, text in text_data]
+    
+    #########################此时的lines里只剩下text_data#########################
 
     # 给数字排个序
     num_data = [(x, y, int(txt)) for x, y, txt in num_data]
     num_data = sorted(num_data, key=lambda x: int(x[2]))
     if num_data[-1][2] % 2 == 1:  # 删除奇数
         num_data.pop(-1)
-
+    
     # 去除框内的多余的text
-
     def get_gravity_point(points):
         """
         @brief      获取多边形的重心点
@@ -267,8 +242,46 @@ def get_original_data_dict(page, clip):
     num_points = create_equal_ratio_points(
         num_points, 0.8, get_gravity_point(num_points))
     poly_path = mplPath.Path(np.array(num_points))
-    text_data = [(center_x, center_y, text) for center_x, center_y, text in text_data
-                 if not poly_path.contains_point((center_x, center_y))]
+    for line in lines.copy():
+        center_x, center_y, text = (line['bbox'][0] / 2 + line['bbox'][2] / 2,
+                         line['bbox'][1] / 2 + line['bbox'][3] / 2,
+                         line['text'])
+        if poly_path.contains_point((center_x, center_y)):
+            lines.remove(line)
+    
+
+    # 连接line line的text
+    concat_line_text(lines,standard_font_size)        
+
+    for line in lines:
+        if successive_digit(line['text']):#去除“16  15 14  13”类
+            continue
+        elif line.get('bbox') is not None:
+            text_data.append((line['bbox'][0] / 2 + line['bbox'][2] / 2,
+                         line['bbox'][1] / 2 + line['bbox'][3] / 2,
+                         line['text'])
+                        )
+        else:
+            text_data.append((line['origin'][0],
+                        line['origin'][1],
+                        line['text'])
+                        )
+
+
+    # 数字 字符在一个span中的特殊情况处理
+    def synthetic_num_txt(text):
+        words = [x for x in text.split(' ') if not x == '']
+        if words.__len__() == 2:
+            if words[0].isdigit() and not words[1].isdigit():
+                return words[1]
+            elif words[1].isdigit() and not words[0].isdigit():
+                return words[0]
+            else:
+                return text
+        else:
+            return text
+    text_data = [(center_x, center_y, synthetic_num_txt(text))
+                 for center_x, center_y, text in text_data]
 
     return num_data, text_data
 
