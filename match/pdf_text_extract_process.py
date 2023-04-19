@@ -87,23 +87,11 @@ def split_span_text(lines):
 
 
 def concat_line_text(lines):
-
-    # 拼接同一个line不同span中的字符
-    lines_copy = lines.copy()
-    for line in lines_copy:
-        try:
-            line['text'] = concat_span_text(line['spans'])
-            if line['spans'].__len__() == 0 or not text_filter(line['text']):
-                lines.remove(line)
-        except:
-            continue  # 由于split span后新加入的line不规范，没有，key：spans所以跳过
-
     # 拼接下标
     concated_lines = []
     # 1 比较字体大小，找到下标字体.
-    standard_font_size = lines[0]['spans'][0]['size']
-    lines_copy = lines.copy()
-    for line in lines_copy:
+    standard_font_size = lines[0]['spans'][0]['size']  
+    for line in lines.copy():
         try:
             # 2 根据角度dir，区分拼接顺序与筛选条件：5与50
             if standard_font_size - line['spans'][0]['size'] > 1:
@@ -164,6 +152,15 @@ def get_original_data_dict(page, clip):
 
     # 处理span拆成多个line，主要针对数字
     # split_span_text(lines) #拆开后会导致line信息丢失，暂时关闭
+
+    # 拼接同一个line不同span中的字符
+    for line in lines.copy():
+        try:
+            line['text'] = concat_span_text(line['spans'])
+            if line['spans'].__len__() == 0 or not text_filter(line['text']):
+                lines.remove(line)
+        except:
+            continue  # 由于split span后新加入的line不规范，没有，key：spans所以跳过
 
     # 连接line line的text
     concat_line_text(lines)
