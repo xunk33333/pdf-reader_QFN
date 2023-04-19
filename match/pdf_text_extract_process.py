@@ -202,6 +202,8 @@ def get_original_data_dict(page, clip):
                 return words[1]
             elif words[1].isdigit() and not words[0].isdigit():
                 return words[0]
+            else:
+                return text
         else:
             return text
     text_data = [(center_x, center_y, synthetic_num_txt(text))
