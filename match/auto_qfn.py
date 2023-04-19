@@ -6,7 +6,9 @@ import fitz
 
 
 # import tr
-import cv2, time, os
+import cv2
+import time
+import os
 from PIL import Image, ImageDraw
 import numpy as np
 
@@ -20,34 +22,29 @@ def extractPackage(pdfPath, pageNumber, selectRec, outputPath):
     page = doc[pageNumber - 1]
     name = pdfPath[pdfPath.rindex('/') + 1:-4]
     scale_factor = 4
-    pix = page.get_pixmap(matrix=fitz.Matrix(scale_factor, scale_factor).prerotate(0))
+    pix = page.get_pixmap(matrix=fitz.Matrix(
+        scale_factor, scale_factor).prerotate(0))
     img_path = r"./tmp_pic/tmp.png"
     if not os.path.exists("tmp_pic"):  # 判断存放图片的文件夹是否存在
         os.makedirs("tmp_pic")  # 若图片文件夹不存在就创建
     pix.save(img_path)
 
-    #保存框中的高分tup
+    # 保存框中的高分tup
     image = cv2.imread(img_path)
-    tl = [int(selectRec[0] * scale_factor),int(selectRec[1]*scale_factor)]
-    br = [int(selectRec[2] * scale_factor),int(selectRec[3]*scale_factor)]
+    tl = [int(selectRec[0] * scale_factor), int(selectRec[1]*scale_factor)]
+    br = [int(selectRec[2] * scale_factor), int(selectRec[3]*scale_factor)]
     cv2.imwrite(img_path,
                 image[tl[1]:br[1], tl[0]:br[0]])
-    
-    #yolo检测，并将pin的框图片保存以备ocr使用
+
+    # yolo检测，并将pin的框图片保存以备ocr使用
     detect_qfn()
-   
-    
 
-
-
-
-
-
-    #主流程
+    # 主流程
     clip = fitz.Rect(selectRec)  # 想要截取的区域
     try:
-        num_data,text_data = get_original_data_dict(page, clip)  # x坐标  y坐标  文本
-        result = match_text_num(num_data,text_data)
+        num_data, text_data = get_original_data_dict(
+            page, clip)  # x坐标  y坐标  文本
+        result = match_text_num(num_data, text_data)
         result = sorted(result, key=lambda x: x[0])
         if result.__len__() == 0:
             result = plan_B(img_path)
@@ -65,16 +62,20 @@ def extractPackage(pdfPath, pageNumber, selectRec, outputPath):
     df = pd.DataFrame(data)
     if not os.path.exists(outputPath):
         os.mkdir(outputPath)
-    save_path = outputPath + '/' + name + '_page_' + str(pageNumber - 1 + 1) + ".xlsx"
+    save_path = outputPath + '/' + name + \
+        '_page_' + str(pageNumber - 1 + 1) + ".csv"
     # while os.path.exists(save_path):
     #     save_path = save_path[:-6] + str(int(save_path[-6]) + 1) + '.xlsx'
-    df.to_excel(save_path, sheet_name="sheet1", startcol=0,
-                index=False)
+    # df.to_excel(save_path, sheet_name="sheet1", startcol=0,
+    #             index=False)
+    df.to_csv(path_or_buf=save_path,sep=',',header=True,index=False)
 
     # 这里是删除tmp
     # del_dir('tmp_pic')
     del_dir('{}'.format(name))
     # del_dir('tmp_txt')
+
+
 def paddle_filter_noise(txt) -> bool:
     var = not (txt.__eq__('-')
                or txt.__contains__("Fig")
@@ -98,22 +99,25 @@ def crop_fig_to_paddle(img_path, num):
         img.rotate(270, expand=1).save(save_path)
 
     return save_path
+
+
 def crop_fig_to_paddle_ByYOLO(img_path, num, boxs):
     img = Image.open(img_path)
     save_path = img_path[:-4] + "_" + str(num) + ".jpg"
     img = img.crop(boxs[num])
-    l,t,r,b = boxs[num]
-    if r-l<b-t:
+    l, t, r, b = boxs[num]
+    if r-l < b-t:
         img.save(save_path)
     else:
         img.rotate(270, expand=1).save(save_path)
     return save_path
 
+
 def tr_filter_noise(rec) -> bool:
     var = rec[2] > 0.7 and (
         not (rec[1].__contains__("-") or rec[1].__contains__("Fig") or rec[1].__contains__(":") or rec[
             1].isdigit() or rec[1].__contains__("(") or rec[1].__contains__(")") or rec[1].__len__() < 2
-             ))
+        ))
     return var
 
 
@@ -121,7 +125,8 @@ def process_img_to_tr(img_path):
     mat_img = cv2.imread(img_path)
     mat_img2 = cv2.cvtColor(mat_img, cv2.COLOR_BGR2GRAY)
     dst1 = \
-        cv2.adaptiveThreshold(mat_img2, 255, cv2.BORDER_REPLICATE, cv2.THRESH_BINARY_INV, 19, 6)
+        cv2.adaptiveThreshold(
+            mat_img2, 255, cv2.BORDER_REPLICATE, cv2.THRESH_BINARY_INV, 19, 6)
     k1 = np.ones((1, 1), dtype=np.uint8)
     dst1 = cv2.morphologyEx(dst1, cv2.MORPH_DILATE, k1)
     contours1, heridency1 = \
@@ -134,8 +139,10 @@ def process_img_to_tr(img_path):
     cv2.imwrite(img_path[:-4] + '_white.jpg', mat_img)
     mat_img2 = cv2.cvtColor(mat_img, cv2.COLOR_BGR2GRAY)
     dst2 = \
-        cv2.adaptiveThreshold(mat_img2, 255, cv2.BORDER_REPLICATE, cv2.THRESH_BINARY_INV, 19, 6)
-    k2 = np.ones((mat_img.shape[0] // 30, mat_img.shape[0] // 30), dtype=np.uint8)
+        cv2.adaptiveThreshold(
+            mat_img2, 255, cv2.BORDER_REPLICATE, cv2.THRESH_BINARY_INV, 19, 6)
+    k2 = np.ones(
+        (mat_img.shape[0] // 30, mat_img.shape[0] // 30), dtype=np.uint8)
     dst2 = cv2.morphologyEx(dst2, cv2.MORPH_DILATE, k2)
     contours2, heridency2 = \
         cv2.findContours(dst2, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
@@ -227,7 +234,8 @@ def extract_with_tr(img_path, num) -> list[str]:
         box = np.int0(np.round(box))
 
         for p1, p2 in [(0, 1), (1, 2), (2, 3), (3, 0)]:
-            img_draw.line(xy=(box[p1][0], box[p1][1], box[p2][0], box[p2][1]), fill=colors[i % len(colors)], width=2)
+            img_draw.line(xy=(box[p1][0], box[p1][1], box[p2][0],
+                          box[p2][1]), fill=colors[i % len(colors)], width=2)
 
     color_pil.save(img_path)
 
@@ -239,20 +247,20 @@ def extract_with_paddle(img_path):
     # 例如`ch`, `en`, `fr`, `german`, `korean`, `japan`
     ocr = PaddleOCR(use_angle_cls=True,
                     lang="en",
-                    det_model_dir= "match/ppocr_model/det/en/en_PP-OCRv3_det_infer",
-                    rec_model_dir= 'match/ppocr_model/rec/en/en_PP-OCRv3_rec_infer',
-                    cls_model_dir= 'match/ppocr_model/cls/ch_ppocr_mobile_v2.0_cls_infer'
+                    det_model_dir="match/ppocr_model/det/en/en_PP-OCRv3_det_infer",
+                    rec_model_dir='match/ppocr_model/rec/en/en_PP-OCRv3_rec_infer',
+                    cls_model_dir='match/ppocr_model/cls/ch_ppocr_mobile_v2.0_cls_infer'
                     )  # need to run only once to download and load model into memory
     alldata = list()
     boxs = []
-    
-    #读取文件获得boundingbox信息
+
+    # 读取文件获得boundingbox信息
     with open("tmp_txt/exp/labels/tmp.txt", 'r', encoding='utf-8') as f:
         for ann in f.readlines():
-            ann = ann.strip('\n').split(' ')      #去除文本中的换行符                      
+            ann = ann.strip('\n').split(' ')  # 去除文本中的换行符
             ann = [int(x) for x in ann]
-            l,t,r,b = scale_rec(ann[1], ann[2], ann[3], ann[4]) 
-            boxs.append((l,t,r,b))
+            l, t, r, b = scale_rec(ann[1], ann[2], ann[3], ann[4])
+            boxs.append((l, t, r, b))
     f.close()
 
     for num in range(boxs.__len__()):
@@ -333,7 +341,8 @@ if __name__ == '__main__':
         # croped_img_path = crop_fig(img_path, num)
 
         # ans = extract_with_tr(croped_img_path[:-4]+'.jpg',num)#恩分
-        ans = extract_with_tr(img_path[:-4] + '_' + str(num) + '.jpg', num)  # 边缘检测分割自动分四块
+        ans = extract_with_tr(
+            img_path[:-4] + '_' + str(num) + '.jpg', num)  # 边缘检测分割自动分四块
         if num in [2, 3]:
             result = result + list(reversed(ans))
         else:
@@ -348,4 +357,5 @@ if __name__ == '__main__':
     import pandas as pd
 
     df = pd.DataFrame(data)
-    df.to_excel("out_" + img_path[9:-4] + ".xlsx", sheet_name="sheet1", startcol=0, index=False)
+    df.to_excel("out_" + img_path[9:-4] + ".xlsx",
+                sheet_name="sheet1", startcol=0, index=False)

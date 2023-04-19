@@ -282,6 +282,12 @@ def get_original_data_dict(page, clip):
             return text
     text_data = [(center_x, center_y, synthetic_num_txt(text))
                  for center_x, center_y, text in text_data]
+    
+    #多余空格的特殊情况处理
+    text_data = [(center_x, center_y, text[1:]) 
+                 if text[0].__eq__(' ')
+                 else (center_x, center_y, text)
+                 for center_x, center_y, text in text_data]
 
     return num_data, text_data
 
