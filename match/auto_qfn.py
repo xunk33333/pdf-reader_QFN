@@ -36,9 +36,6 @@ def extractPackage(pdfPath, pageNumber, selectRec, outputPath):
     cv2.imwrite(img_path,
                 image[tl[1]:br[1], tl[0]:br[0]])
 
-    # yolo检测，并将pin的框图片保存以备ocr使用
-    detect_qfn()
-
     # 主流程
     result = []
     clip = fitz.Rect(selectRec)  # 想要截取的区域
@@ -52,11 +49,9 @@ def extractPackage(pdfPath, pageNumber, selectRec, outputPath):
     except Exception as e:
         if e.__class__.__name__.__eq__("ZeroDivisionError"):
             print("最终结果是空,大概率是加密PDF")
-        elif e.__class__.__name__.__eq__("IndexError"):
-            print("大概率是加密PDF或者不规则")
-            traceback.print_exc()
         else:
             print("PyMuPDF方法报错,实行OCR识别,报错信息如下：")
+            print("大概率是加密PDF或者不规则或是图片")
             traceback.print_exc()
         try:
             result = plan_B(img_path)
@@ -298,6 +293,10 @@ def extract_with_paddle(img_path):
 
 
 def plan_B(img_path):
+
+     # yolo检测，并将pin的框图片保存以备ocr使用
+    detect_qfn()
+
     print('###################################OCR日志##########################################')
     alldata = extract_with_paddle(img_path)
 
