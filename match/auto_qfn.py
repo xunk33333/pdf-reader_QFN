@@ -47,10 +47,21 @@ def extractPackage(pdfPath, pageNumber, selectRec, outputPath):
         result = match_text_num(num_data, text_data)
         result = sorted(result, key=lambda x: x[0])
         if result.__len__() == 0:
+            1/0
+    except Exception as e:
+        if e.__class__.__name__.__eq__("ZeroDivisionError"):
+            print("最终结果是空,大概率是加密PDF")
+        elif e.__class__.__name__.__eq__("IndexError"):
+            print("大概率是加密PDF")
+            traceback.print_exc()
+        else:
+            print("PyMuPDF方法报错,实行OCR识别,报错信息如下：")
+            traceback.print_exc()
+        try:
             result = plan_B(img_path)
-    except:
-        traceback.print_exc()
-        result = plan_B(img_path)
+        except:
+            print("OCR方法报错,文件{}没有结果,报错信息如下：".format(name))
+            traceback.print_exc()
     # print(result)
     # print("1.所复制内容为：" + str(a_text))
     # pyperclip.copy(a_text)
@@ -286,6 +297,7 @@ def extract_with_paddle(img_path):
 
 
 def plan_B(img_path):
+    print('###################################OCR日志##########################')
     alldata = extract_with_paddle(img_path)
 
     def match_text_num(data):

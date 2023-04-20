@@ -168,8 +168,9 @@ def detect_qfn():
     parser.add_argument('--name', default='exp', help='save results to project/name')
     parser.add_argument('--exist-ok', action='store_true', help='existing project/name ok, do not increment')
     opt = parser.parse_args()
-
+    print('##########################YOLO日志start#######################')
     detect(opt=opt)
+    print('##########################YOLO日志end#######################')
     # img_path = r"./tmp_pic/tmp.png"
     # img = cv2.imread(img_path)
     # with open("tmp_txt/exp/labels/tmp.txt", 'r', encoding='utf-8') as f:
