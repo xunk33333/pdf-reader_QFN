@@ -87,8 +87,9 @@ def split_span_text(lines):
                               })
 
 
-def concat_line_text(lines,standard_font_size):
+def concat_line_text(lines):
     # 拼接下标
+    standard_font_size = lines[0]['spans'][0]['size']
     concated_lines = []
     # 1 比较字体大小，找到下标字体.
     for line in lines.copy():
@@ -167,7 +168,6 @@ def get_original_data_dict(page, clip):
     #获得num_data
     for line in lines.copy():
         if line['text'].isdigit():
-            standard_font_size = line['spans'][0]['size']
             num_data.append((line['bbox'][0] / 2 + line['bbox'][2] / 2,
                          line['bbox'][1] / 2 + line['bbox'][3] / 2,
                          line['text'])
@@ -251,7 +251,7 @@ def get_original_data_dict(page, clip):
     
 
     # 连接line line的text
-    concat_line_text(lines,standard_font_size)        
+    concat_line_text(lines)        
 
     for line in lines:
         if successive_digit(line['text']):#去除“16  15 14  13”类

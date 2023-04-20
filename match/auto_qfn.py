@@ -40,6 +40,7 @@ def extractPackage(pdfPath, pageNumber, selectRec, outputPath):
     detect_qfn()
 
     # 主流程
+    result = []
     clip = fitz.Rect(selectRec)  # 想要截取的区域
     try:
         num_data, text_data = get_original_data_dict(
@@ -52,7 +53,7 @@ def extractPackage(pdfPath, pageNumber, selectRec, outputPath):
         if e.__class__.__name__.__eq__("ZeroDivisionError"):
             print("最终结果是空,大概率是加密PDF")
         elif e.__class__.__name__.__eq__("IndexError"):
-            print("大概率是加密PDF")
+            print("大概率是加密PDF或者不规则")
             traceback.print_exc()
         else:
             print("PyMuPDF方法报错,实行OCR识别,报错信息如下：")
@@ -74,17 +75,17 @@ def extractPackage(pdfPath, pageNumber, selectRec, outputPath):
     if not os.path.exists(outputPath):
         os.mkdir(outputPath)
     save_path = outputPath + '/' + name + \
-        '_page_' + str(pageNumber - 1 + 1) + ".csv"
-    # while os.path.exists(save_path):
-    #     save_path = save_path[:-6] + str(int(save_path[-6]) + 1) + '.xlsx'
+        '_page_' + str(pageNumber - 1 + 1) + "_0.csv"
+    while os.path.exists(save_path):
+        save_path = save_path[:-5] + str(int(save_path[-5]) + 1) + '.csv'
     # df.to_excel(save_path, sheet_name="sheet1", startcol=0,
     #             index=False)
     df.to_csv(path_or_buf=save_path,sep=',',header=True,index=False)
 
     # 这里是删除tmp
-    # del_dir('tmp_pic')
+    del_dir('tmp_pic')
     del_dir('{}'.format(name))
-    # del_dir('tmp_txt')
+    del_dir('tmp_txt')
 
 
 def paddle_filter_noise(txt) -> bool:
