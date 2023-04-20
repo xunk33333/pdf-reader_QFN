@@ -297,7 +297,7 @@ def extract_with_paddle(img_path):
 
 
 def plan_B(img_path):
-    print('###################################OCR日志##########################')
+    print('###################################OCR日志##########################################')
     alldata = extract_with_paddle(img_path)
 
     def match_text_num(data):
