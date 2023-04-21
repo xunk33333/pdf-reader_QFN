@@ -17,7 +17,16 @@ from match.pdf_text_extract_process import match_text_num, del_dir, get_original
 from match.yolov5.detect import detect_qfn, scale_rec
 
 
-def extractPackage(pdfPath, pageNumber, selectRec, outputPath):
+def extractPackage(pdfPath, pageNumber, selectRec, outputPath, tryOCR = False):
+    """提取QFN原理图的PinNumber与PinName，并匹配对应后输出到CSV文件：outputPath/pdfName_page_pageNumber.csv
+
+    Args:
+        pdfPath (str): pdf的路径
+        pageNumber (int): 想要提取的页码
+        selectRec (tuple(l,t,r,b)): l,t,r,b分别对应选取区域的左上的x，y与右下的x，y
+        outputPath (str):结果输出路径
+        tryOCR (bool, optional): 是否强制进行OCR识别 Defaults to False.
+    """
     doc = fitz.open(pdfPath)
     page = doc[pageNumber - 1]
     name = pdfPath[pdfPath.rindex('/') + 1:-4]
@@ -44,11 +53,11 @@ def extractPackage(pdfPath, pageNumber, selectRec, outputPath):
             page, clip)  # x坐标  y坐标  文本
         result = match_text_num(num_data, text_data)
         result = sorted(result, key=lambda x: x[0])
-        if result.__len__() == 0:
+        if result.__len__() == 0 or tryOCR == True:
             1/0
     except Exception as e:
         if e.__class__.__name__.__eq__("ZeroDivisionError"):
-            print("最终结果是空,大概率是加密PDF")
+            print("最终结果是空或自主OCR")
         else:
             print("PyMuPDF方法报错,实行OCR识别,报错信息如下：")
             print("大概率是加密PDF或者不规则或是图片")
@@ -69,17 +78,19 @@ def extractPackage(pdfPath, pageNumber, selectRec, outputPath):
     df = pd.DataFrame(data)
     if not os.path.exists(outputPath):
         os.mkdir(outputPath)
-    save_path = outputPath + '/' + name + \
-        '_page_' + str(pageNumber - 1 + 1) + "_0.csv"
-    while os.path.exists(save_path):
-        save_path = save_path[:-5] + str(int(save_path[-5]) + 1) + '.csv'
-    # df.to_excel(save_path, sheet_name="sheet1", startcol=0,
-    #             index=False)
+    
+    if 1 == 0:#方便测试
+        save_path = outputPath + '/' + name + \
+            '_page_' + str(pageNumber - 1 + 1) + "_0.csv"
+        while os.path.exists(save_path):
+            save_path = save_path[:-5] + str(int(save_path[-5]) + 1) + '.csv'
+    else:
+        save_path = outputPath + '/' + name + \
+            '_page_' + str(pageNumber - 1 + 1) + ".csv"
     df.to_csv(path_or_buf=save_path,sep=',',header=True,index=False)
 
     # 这里是删除tmp
     del_dir('tmp_pic')
-    del_dir('{}'.format(name))
     del_dir('tmp_txt')
 
 

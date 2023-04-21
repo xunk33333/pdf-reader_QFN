@@ -106,6 +106,17 @@ def concat_line_text(lines):
 
 
 def concat_subscript_text(lines, subline, threshold1=5, threshold2=50):
+    """拼接line，目前只有横向的左到右的拼接
+    注：拼接后会把所有涉及到的line从lines中移除
+    Args:
+        lines (_type_): 当前的所有line
+        subline (_type_): 根据字体大小，找到的下标字体对应的line
+        threshold1 (int, optional): 小阈值. 以左到右为例，为了筛除上下相邻的 Defaults to 5.
+        threshold2 (int, optional): 大阈值. 以左到右为例，确定左右范围，防止把对面的也拼进来 Defaults to 50.
+
+    Returns:
+        _type_: 拼接好的line，如果没拼接则会返回None
+    """
     lines_copy = lines.copy()
     potential_match = []
 
@@ -141,6 +152,24 @@ def concat_subscript_text(lines, subline, threshold1=5, threshold2=50):
 
 
 def get_original_data_dict(page, clip):
+    """获取已经处理好的numdata与textdata
+
+    处理流程：
+            1）获取所有line放入列表lines
+            2）把一个line中存在多个span的，给拼接起来结果放在line['text']，然后顺便进行一次多余数据的筛除
+            3）筛选出所有的num，存入num_data，并把对应的line在lines中去除
+            4）根据num_data围成多边形，按比例缩小多边形，去除多边形内部数据
+            5）连接line与line
+            6）一些特殊情况的处理
+
+    Args:
+        page (fitz.Page): 对应页面
+        clip (fitz.Rect): 矩形区域
+
+    Returns:
+        num_data, text_data: 存储数据的列表
+        单个数据格式（center_x, center_y, text）
+    """
     blocks = page.get_text("dict", clip=clip)['blocks']
     lines = []
     data = []

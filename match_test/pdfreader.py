@@ -15,6 +15,7 @@ import os
 import fitz
 
 from match.auto_qfn import extractPackage
+from match.pdf_text_extract_process import del_dir
 from match_test.mydatabase import MyDb
 from match_test.manual_boxes import DrawRects, WIN_NAME, onmouse_draw_rect
 
@@ -329,6 +330,8 @@ class PDFReader(QMainWindow):
             extractPackage(pdfPath, pageNumber, selectRec, outputPath)
         except:
             traceback.print_exc()
+        finally:
+            del_dir('{}'.format(name))
 
 
 if __name__ == '__main__':
