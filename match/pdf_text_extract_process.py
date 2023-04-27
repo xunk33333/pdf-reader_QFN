@@ -1,10 +1,21 @@
 from decimal import Decimal
-import os
 import pickle
 import re
-import shutil
 import matplotlib.path as mplPath
 import numpy as np
+import fitz
+
+
+def fitz_method(pdfPath, pageNumber, selectRec, outputPath):
+    result = []
+    doc = fitz.open(pdfPath)
+    page = doc[pageNumber - 1]
+    clip = fitz.Rect(selectRec)  # 想要截取的区域
+    num_data, text_data = get_original_data_dict(
+        page, clip)  # x坐标  y坐标  文本
+    result = match_text_num(num_data, text_data)
+    result = sorted(result, key=lambda x: x[0])
+    return result
 
 
 def match_text_num(num_data, text_data, threshold=7):
@@ -192,31 +203,31 @@ def get_original_data_dict(page, clip):
         except:
             continue  # 由于split span后新加入的line不规范，没有，key：spans所以跳过
 
-    
-
-    #获得num_data
+    # 获得num_data
     for line in lines.copy():
         if line['text'].isdigit():
             num_data.append((line['bbox'][0] / 2 + line['bbox'][2] / 2,
-                         line['bbox'][1] / 2 + line['bbox'][3] / 2,
-                         line['text'])
-                        )
+                             line['bbox'][1] / 2 + line['bbox'][3] / 2,
+                             line['text'])
+                            )
             lines.remove(line)
-            
+
     # 上面获取num——data有问题，所以用下面方法补充
+    threshold_of_get_number = 2
     words = page.get_text("words", clip=clip)
     for _, _, right, bottom, txt, block_no, line_no, word_no in words:
         if txt.isdigit() and txt not in [x[2] for x in num_data]:
-            num_data.append((right-2, bottom-2, txt))
-    
-    #########################此时的lines里只剩下text_data#########################
+            num_data.append((right-threshold_of_get_number,
+                            bottom-threshold_of_get_number, txt))
+
+    ######################### 此时的lines里只剩下text_data#########################
 
     # 给数字排个序
     num_data = [(x, y, int(txt)) for x, y, txt in num_data]
     num_data = sorted(num_data, key=lambda x: int(x[2]))
     if num_data[-1][2] % 2 == 1:  # 删除奇数
         num_data.pop(-1)
-    
+
     # 去除框内的多余的text
     def get_gravity_point(points):
         """
@@ -267,37 +278,37 @@ def get_original_data_dict(page, clip):
             new_points.append(new_point)
         return new_points
 
+    threshold_of_ratio = 0.8
     num_points = [[x, y] for x, y, _ in num_data]
     num_points = create_equal_ratio_points(
-        num_points, 0.8, get_gravity_point(num_points))
+        num_points, threshold_of_ratio, get_gravity_point(num_points))
     poly_path = mplPath.Path(np.array(num_points))
     for line in lines.copy():
         center_x, center_y, text = (line['bbox'][0] / 2 + line['bbox'][2] / 2,
-                         line['bbox'][1] / 2 + line['bbox'][3] / 2,
-                         line['text'])
+                                    line['bbox'][1] / 2 + line['bbox'][3] / 2,
+                                    line['text'])
         if poly_path.contains_point((center_x, center_y)):
             lines.remove(line)
-    
 
     # 连接line line的text
-    concat_line_text(lines)        
+    concat_line_text(lines)
 
     for line in lines:
-        if successive_digit(line['text']):#去除“16  15 14  13”类
+        if successive_digit(line['text']):  # 去除“16  15 14  13”类
             continue
         elif line.get('bbox') is not None:
             text_data.append((line['bbox'][0] / 2 + line['bbox'][2] / 2,
-                         line['bbox'][1] / 2 + line['bbox'][3] / 2,
-                         line['text'])
-                        )
+                              line['bbox'][1] / 2 + line['bbox'][3] / 2,
+                              line['text'])
+                             )
         else:
             text_data.append((line['origin'][0],
-                        line['origin'][1],
-                        line['text'])
-                        )
-
+                              line['origin'][1],
+                              line['text'])
+                             )
 
     # 数字 字符在一个span中的特殊情况处理
+
     def synthetic_num_txt(text):
         words = [x for x in text.split(' ') if not x == '']
         if words.__len__() == 2:
@@ -311,41 +322,32 @@ def get_original_data_dict(page, clip):
             return text
     text_data = [(center_x, center_y, synthetic_num_txt(text))
                  for center_x, center_y, text in text_data]
-    
-    #多余空格的特殊情况处理
-    text_data = [(center_x, center_y, text[1:]) 
+
+    # 多余空格的特殊情况处理
+    text_data = [(center_x, center_y, text[1:])
                  if text[0].__eq__(' ')
                  else (center_x, center_y, text)
                  for center_x, center_y, text in text_data]
 
     return num_data, text_data
 
+
 def get_original_data_words(page, clip):
     num_data = []
     text_data = []
-    data = [(x[2], x[3], x[4]) for x in page.get_text("words", clip=clip)]  # x坐标  y坐标  文本
+    data = [(x[2], x[3], x[4])
+            for x in page.get_text("words", clip=clip)]  # x坐标  y坐标  文本
     for center_x, center_y, text in data:
         if text.isdigit():
             num_data.append((center_x, center_y, int(text)))
         else:
             text_data.append((center_x, center_y, text))
 
-    num_data = sorted(num_data, key=lambda x: int(x[2]))#排序
+    num_data = sorted(num_data, key=lambda x: int(x[2]))  # 排序
     if num_data[-1][2] % 2 == 1:  # 删除奇数
         num_data.pop(-1)
-        
+
     return num_data, text_data
 
-def del_dir(path):
-    filelist = []
-    rootdir = path  # 选取删除文件夹的路径,最终结果删除img文件夹
-    filelist = os.listdir(rootdir)  # 列出该目录下的所有文件名
-    for f in filelist:
-        filepath = os.path.join(rootdir, f)  # 将文件名映射成绝对路劲
-        if os.path.isfile(filepath):  # 判断该文件是否为文件或者文件夹
-            os.remove(filepath)  # 若为文件，则直接删除
-            # print(str(filepath)+" removed!")
-        elif os.path.isdir(filepath):
-            shutil.rmtree(filepath, True)  # 若为文件夹，则删除该文件夹及文件夹内所有文件
-            # print("dir "+str(filepath)+" removed!")
-    shutil.rmtree(rootdir, True)  # 最后删除img总文件夹
+
+

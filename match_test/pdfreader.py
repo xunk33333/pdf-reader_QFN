@@ -14,8 +14,7 @@ from PyQt5.QtWidgets import QVBoxLayout, QFileDialog, QInputDialog, QLabel, \
 import os
 import fitz
 
-from match.auto_qfn import extractPackage
-from match.pdf_text_extract_process import del_dir
+from match.auto_qfn import extractPackage,del_dir
 from match_test.mydatabase import MyDb
 from match_test.manual_boxes import DrawRects, WIN_NAME, onmouse_draw_rect
 
