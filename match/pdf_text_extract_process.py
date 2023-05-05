@@ -13,11 +13,13 @@ def fitz_method(pdfPath, pageNumber, selectRec, outputPath):
     clip = fitz.Rect(selectRec)  # 想要截取的区域
     num_data, text_data = get_original_data_dict(
         page, clip)  # x坐标  y坐标  文本
-    result,restart = match_text_num(num_data, text_data, 5)
+    result,restart = match_text_num(num_data, text_data, 4)
     if restart:
-        result,restart = match_text_num(num_data, text_data, 6)
+        result,restart = match_text_num(num_data, text_data, 5)
         if restart:
-            result,restart = match_text_num(num_data, text_data, 7)
+            result,restart = match_text_num(num_data, text_data, 6)
+            if restart:
+                result,restart = match_text_num(num_data, text_data, 7)
     result = sorted(result, key=lambda x: x[0])
     return result
 
