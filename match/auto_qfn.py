@@ -9,11 +9,11 @@ import time
 import os
 from PIL import Image, ImageDraw
 import numpy as np
-from match.ocr_text_extract_process import OCR_method
+# from match.ocr_text_extract_process import OCR_method
 from match.pdf_text_extract_process import fitz_method
 
 
-def extractPackage(pdfPath, pageNumber, selectRec, outputPath, tryOCR=False):
+def extractPackage(pdfPath, pageNumber, selectRec, outputPath):
     """提取QFN原理图的PinNumber与PinName，并匹配对应后输出到CSV文件：outputPath/pdfName_page_pageNumber.csv
 
     Args:
@@ -21,7 +21,6 @@ def extractPackage(pdfPath, pageNumber, selectRec, outputPath, tryOCR=False):
         pageNumber (int): 想要提取的页码
         selectRec (tuple(l,t,r,b)): l,t,r,b分别对应选取区域的左上的x，y与右下的x，y
         outputPath (str):结果输出路径
-        tryOCR (bool, optional): 是否强制进行OCR识别 Defaults to False.
     """
 
     name = pdfPath[pdfPath.rindex('/') + 1:-4]
@@ -29,27 +28,14 @@ def extractPackage(pdfPath, pageNumber, selectRec, outputPath, tryOCR=False):
     # 主流程
     try:
         result = fitz_method(pdfPath, pageNumber, selectRec, outputPath)
-        if result.__len__() == 0 or tryOCR == True:
+        if result.__len__() == 0 :
             1/0
     except Exception as e:
         if e.__class__.__name__.__eq__("ZeroDivisionError"):
-            print("最终结果是空或自主OCR")
+            print("最终结果是空,大概率是加密PDF")
         else:
-            print("PyMuPDF方法报错,实行OCR识别,报错信息如下：")
-            print("大概率是加密PDF或者不规则或是图片")
-            traceback.print_exc()
-        try:
-            result = OCR_method(pdfPath, pageNumber, selectRec, outputPath)
-        except:
-            print("OCR方法报错,文件{}没有结果,报错信息如下：".format(name))
-            traceback.print_exc()
-        finally:
-            # 这里是删除tmp
-            del_dir('tmp_pic')
-            del_dir('tmp_txt')
-    # print(result)
-    # print("1.所复制内容为：" + str(a_text))
-    # pyperclip.copy(a_text)
+            print("大概率是图片,需要OCR")
+        traceback.print_exc()
     print("完成复制")
     data = {"Number": [x[0] for x in result], "Name": [x[1] for x in result]}
     # data['Electrical Type'] = []
