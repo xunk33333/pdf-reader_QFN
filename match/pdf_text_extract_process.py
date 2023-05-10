@@ -214,7 +214,7 @@ def get_original_data_dict(page, clip):
 
     # 获得num_data
     for line in lines.copy():
-        if line['text'].isdigit():
+        if line['text'].isdigit() and line['text'] not in [x[2] for x in num_data]:
             num_data.append((line['bbox'][0] / 2 + line['bbox'][2] / 2,
                              line['bbox'][1] / 2 + line['bbox'][3] / 2,
                              line['text'])
