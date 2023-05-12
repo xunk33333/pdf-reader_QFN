@@ -29,9 +29,9 @@ def extractPackage(pdfPath, pageNumber, selectRec, outputPath):
     try:
         result = fitz_method(pdfPath, pageNumber, selectRec, outputPath)
         if result.__len__() == 0 :
-            1/0
+            raise ValueError("The result is empty")
     except Exception as e:
-        if e.__class__.__name__.__eq__("ZeroDivisionError"):
+        if e.__class__.__name__.__eq__("ValueError"):
             print("最终结果是空,大概率是加密PDF")
         else:
             print("大概率是图片,需要OCR")
